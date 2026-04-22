@@ -1,6 +1,6 @@
 # SquadUp Backend API
 
-API REST construida con Node.js, TypeScript, Express y MySQL siguiendo arquitectura hexagonal.
+API REST + WebSocket construida con Node.js, TypeScript, Express, Socket.io y MySQL siguiendo arquitectura hexagonal.
 
 ---
 
@@ -68,6 +68,7 @@ npm start
 ```
 
 El servidor corre en `http://localhost:3000`
+El WebSocket corre en `ws://localhost:3000`
 
 ---
 
@@ -102,7 +103,7 @@ http://localhost:3000/uploads/lobbys/squadup_milobby_1234567890.png
 
 ---
 
-## Endpoints
+## Endpoints REST
 
 ### Auth & Usuarios
 
@@ -133,22 +134,75 @@ http://localhost:3000/uploads/lobbys/squadup_milobby_1234567890.png
 | POST | `/api/lobbys/:id/leave` | ✅ | — | Salir de un lobby |
 | GET | `/api/lobbys/:id/members` | ✅ | — | Ver miembros del lobby |
 
+### Chat (REST fallback)
+
+| Método | Ruta | Auth | Descripción |
+|--------|------|------|-------------|
+| GET | `/api/lobbys/:id/messages?limit=50` | ✅ | Historial de mensajes de un lobby |
+
+---
+
+## WebSocket — Chat en tiempo real
+
+La conexión WebSocket usa **Socket.io**. La autenticación se hace enviando el JWT en el handshake.
+
+### Conectarse
+
+```javascript
+import { io } from 'socket.io-client';
+
+const socket = io('http://localhost:3000', {
+  withCredentials: true, // envía la cookie access_token automáticamente
+});
+```
+
+Si el frontend no puede enviar cookies en el handshake, pasa el token manualmente:
+
+```javascript
+const socket = io('http://localhost:3000', {
+  auth: {
+    token: 'tu_jwt_aqui',
+  },
+});
+```
+
+### Eventos que emites (cliente → servidor)
+
+| Evento | Datos | Descripción |
+|--------|-------|-------------|
+| `join_lobby` | `lobby_id: number` | Entrar a la sala del chat de un lobby |
+| `leave_lobby` | `lobby_id: number` | Salir de la sala |
+| `send_message` | `{ lobby_id: number, content: string }` | Enviar un mensaje |
+
+### Eventos que recibes (servidor → cliente)
+
+| Evento | Datos | Descripción |
+|--------|-------|-------------|
+| `message_history` | `Message[]` | Historial de mensajes al hacer `join_lobby` |
+| `new_message` | `Message` | Nuevo mensaje en tiempo real |
+| `error` | `{ message: string }` | Error del servidor |
+
+### Estructura de un mensaje
+
+```json
+{
+  "id": 1,
+  "lobby_id": 3,
+  "user_id": 7,
+  "content": "Hola a todos!",
+  "sentAt": "2025-04-22T10:30:00.000Z"
+}
+```
+
 ---
 
 ## Ejemplos de uso en el frontend
 
-### Configuración base con fetch
+### Configuración base
 
 ```javascript
 const API = 'http://localhost:3000/api';
-
-// Siempre incluir credentials para que las cookies funcionen
-const options = {
-  credentials: 'include',
-};
 ```
-
----
 
 ### Registro con imagen (form-data)
 
@@ -159,11 +213,7 @@ async function register(data) {
   formData.append('lastname', data.lastname);
   formData.append('email', data.email);
   formData.append('password', data.password);
-
-  // Solo si el usuario seleccionó una imagen
-  if (data.profilePicture) {
-    formData.append('profile_picture', data.profilePicture); // File object
-  }
+  if (data.profilePicture) formData.append('profile_picture', data.profilePicture);
 
   const res = await fetch(`${API}/auth/register`, {
     method: 'POST',
@@ -175,18 +225,6 @@ async function register(data) {
   return res.json();
 }
 ```
-
-```html
-<!-- Ejemplo de input en HTML -->
-<input type="file" id="avatar" accept="image/png, image/jpeg, image/webp" />
-```
-
-```javascript
-// Obtener el File del input
-const file = document.getElementById('avatar').files[0];
-```
-
----
 
 ### Login (json)
 
@@ -200,38 +238,8 @@ async function login(email, password) {
   });
 
   return res.json();
-  // Las cookies se setean automáticamente en el navegador
 }
 ```
-
----
-
-### Obtener perfil
-
-```javascript
-async function getProfile() {
-  const res = await fetch(`${API}/auth/profile`, {
-    credentials: 'include', // envía la cookie access_token
-  });
-
-  return res.json();
-}
-```
-
----
-
-### Logout
-
-```javascript
-async function logout() {
-  await fetch(`${API}/auth/logout`, {
-    method: 'POST',
-    credentials: 'include',
-  });
-}
-```
-
----
 
 ### Crear lobby con imagen (form-data)
 
@@ -239,14 +247,8 @@ async function logout() {
 async function createLobby(data) {
   const formData = new FormData();
   formData.append('name', data.name);
-
-  if (data.description) {
-    formData.append('description', data.description);
-  }
-
-  if (data.image) {
-    formData.append('image', data.image); // File object
-  }
+  if (data.description) formData.append('description', data.description);
+  if (data.image) formData.append('image', data.image);
 
   const res = await fetch(`${API}/lobbys`, {
     method: 'POST',
@@ -258,122 +260,100 @@ async function createLobby(data) {
 }
 ```
 
----
-
-### Unirse a un lobby
+### Chat con Socket.io — ejemplo completo
 
 ```javascript
-async function joinLobby(lobbyId) {
-  const res = await fetch(`${API}/lobbys/${lobbyId}/join`, {
-    method: 'POST',
-    credentials: 'include',
-  });
+import { io } from 'socket.io-client';
 
-  return res.json();
+const socket = io('http://localhost:3000', {
+  withCredentials: true,
+});
+
+// Entrar al chat de un lobby
+socket.emit('join_lobby', lobbyId);
+
+// Recibir historial al entrar
+socket.on('message_history', (messages) => {
+  renderMessages(messages);
+});
+
+// Recibir mensajes nuevos en tiempo real
+socket.on('new_message', (message) => {
+  appendMessage(message);
+});
+
+// Enviar mensaje
+socket.emit('send_message', { lobby_id: lobbyId, content: 'Hola!' });
+
+// Salir del chat
+socket.emit('leave_lobby', lobbyId);
+
+// Errores
+socket.on('error', (err) => console.error(err.message));
+```
+
+### Chat con Socket.io — React
+
+```jsx
+import { useEffect, useRef, useState } from 'react';
+import { io } from 'socket.io-client';
+
+function LobbyChat({ lobbyId }) {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const socketRef = useRef(null);
+
+  useEffect(() => {
+    socketRef.current = io('http://localhost:3000', { withCredentials: true });
+    socketRef.current.emit('join_lobby', lobbyId);
+
+    socketRef.current.on('message_history', (history) => setMessages(history));
+    socketRef.current.on('new_message', (msg) => setMessages(prev => [...prev, msg]));
+
+    return () => {
+      socketRef.current.emit('leave_lobby', lobbyId);
+      socketRef.current.disconnect();
+    };
+  }, [lobbyId]);
+
+  const handleSend = () => {
+    if (!input.trim()) return;
+    socketRef.current.emit('send_message', { lobby_id: lobbyId, content: input });
+    setInput('');
+  };
+
+  return (
+    <div>
+      <div>
+        {messages.map(msg => (
+          <p key={msg.id}><strong>{msg.user_id}:</strong> {msg.content}</p>
+        ))}
+      </div>
+      <input value={input} onChange={e => setInput(e.target.value)} />
+      <button onClick={handleSend}>Enviar</button>
+    </div>
+  );
 }
 ```
 
----
-
-### Actualizar usuario con nueva foto (form-data)
-
-```javascript
-async function updateUser(userId, data) {
-  const formData = new FormData();
-  formData.append('name', data.name);
-  formData.append('lastname', data.lastname);
-  formData.append('email', data.email);
-
-  if (data.profilePicture) {
-    formData.append('profile_picture', data.profilePicture);
-  }
-
-  const res = await fetch(`${API}/users/${userId}`, {
-    method: 'PUT',
-    credentials: 'include',
-    body: formData,
-  });
-
-  return res.json();
-}
-```
-
----
-
-### Ejemplo con axios
+### Con axios
 
 ```javascript
 import axios from 'axios';
 
 const api = axios.create({
   baseURL: 'http://localhost:3000/api',
-  withCredentials: true, // equivalente a credentials: 'include'
+  withCredentials: true,
 });
 
-// Login
-const login = async (email, password) => {
-  const { data } = await api.post('/auth/login', { email, password });
-  return data;
-};
+const login = (email, password) => api.post('/auth/login', { email, password });
 
-// Registro con imagen
-const register = async (formData) => {
-  const { data } = await api.post('/auth/register', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
-  return data;
-};
+const register = (formData) => api.post('/auth/register', formData, {
+  headers: { 'Content-Type': 'multipart/form-data' },
+});
 
-// Crear lobby
-const createLobby = async (formData) => {
-  const { data } = await api.post('/lobbys', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
-  return data;
-};
-```
-
----
-
-### Ejemplo con React + fetch
-
-```jsx
-function RegisterForm() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [avatar, setAvatar] = useState(null);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    const formData = new FormData();
-    formData.append('name', name);
-    formData.append('lastname', 'Apellido');
-    formData.append('email', email);
-    formData.append('password', password);
-    if (avatar) formData.append('profile_picture', avatar);
-
-    const res = await fetch('http://localhost:3000/api/auth/register', {
-      method: 'POST',
-      credentials: 'include',
-      body: formData,
-    });
-
-    const data = await res.json();
-    console.log(data);
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <input value={name} onChange={e => setName(e.target.value)} placeholder="Nombre" />
-      <input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" />
-      <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" />
-      <input type="file" accept="image/*" onChange={e => setAvatar(e.target.files[0])} />
-      <button type="submit">Registrarse</button>
-    </form>
-  );
-}
+const getMessages = (lobbyId, limit = 50) =>
+  api.get(`/lobbys/${lobbyId}/messages?limit=${limit}`);
 ```
 
 ---
@@ -384,27 +364,35 @@ function RegisterForm() {
 squadup_backend/
 ├── src/
 │   ├── core/
-│   │   ├── config/
-│   │   │   └── conn.ts               # Conexión MySQL
+│   │   ├── config/conn.ts
 │   │   ├── security/
-│   │   │   ├── auth.ts               # JWT helpers
-│   │   │   ├── hash.ts               # bcrypt helpers
-│   │   │   ├── jwt_middleware.ts     # Middleware de autenticación
+│   │   │   ├── auth.ts
+│   │   │   ├── hash.ts
+│   │   │   ├── jwt_middleware.ts
 │   │   │   └── utils.ts
 │   │   └── upload/
-│   │       ├── uploadUser.ts         # Multer config usuarios
-│   │       └── uploadLobby.ts        # Multer config lobbys
+│   │       ├── uploadUser.ts
+│   │       └── uploadLobby.ts
 │   ├── users/
-│   │   ├── domain/                   # Entidades, interfaces, DTOs
-│   │   ├── application/              # Casos de uso
-│   │   └── infrastructure/           # Controladores, adaptadores, rutas
-│   └── lobbys/
+│   │   ├── domain/
+│   │   ├── application/
+│   │   └── infrastructure/
+│   ├── lobbys/
+│   │   ├── domain/
+│   │   ├── application/
+│   │   └── infrastructure/
+│   └── messages/
 │       ├── domain/
 │       ├── application/
 │       └── infrastructure/
+│           ├── adapters/
+│           ├── controllers/
+│           ├── routes/
+│           └── socket/
+│               └── chatSocket.ts
 ├── uploads/
-│   ├── users/                        # Fotos de perfil
-│   └── lobbys/                       # Imágenes de lobbys
+│   ├── users/
+│   └── lobbys/
 ├── main.ts
 ├── schema.sql
 └── .env
@@ -415,8 +403,9 @@ squadup_backend/
 ## Notas importantes
 
 - Los endpoints con imágenes usan `multipart/form-data`. **No envíes `Content-Type: application/json`** en esos endpoints, el navegador lo maneja solo.
-- El tamaño máximo de imagen es **5MB**.
-- Formatos aceptados: `jpg`, `jpeg`, `png`, `webp`.
+- El tamaño máximo de imagen es **5MB**. Formatos: `jpg`, `jpeg`, `png`, `webp`.
 - Solo el **owner** puede editar o eliminar su lobby.
-- El **owner** no puede salir de su lobby con `/leave`, debe eliminarlo.
-- Las cookies son `HttpOnly` — no son accesibles desde JavaScript, solo se envían automáticamente con `credentials: 'include'`.
+- El **owner** no puede usar `/leave`, debe eliminar el lobby directamente.
+- Las cookies son `HttpOnly` — solo se envían automáticamente con `credentials: 'include'`.
+- El chat usa **Socket.io**. Instala en el frontend: `npm install socket.io-client`.
+- Si las cookies no llegan en el handshake del socket, pasa el token en `auth: { token }`.
