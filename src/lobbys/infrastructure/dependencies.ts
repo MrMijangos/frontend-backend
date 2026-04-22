@@ -1,0 +1,41 @@
+import { MySQLLobbyRepository } from './adapters/MySQLLobbyAdapter';
+import { CreateLobbyUseCase } from '../application/CreateLobbyUseCase';
+import { GetAllLobbysUseCase } from '../application/GetAllLobbysUseCase';
+import { GetLobbyByIdUseCase } from '../application/GetLobbyByIdUseCase';
+import { GetLobbysByOwnerUseCase } from '../application/GetLobbysByOwnerUseCase';
+import { UpdateLobbyUseCase } from '../application/UpdateLobbyUseCase';
+import { DeleteLobbyUseCase } from '../application/DeleteLobbyUseCase';
+import { JoinLobbyUseCase } from '../application/JoinLobbyUseCase';
+import { LeaveLobbyUseCase } from '../application/LeaveLobbyUseCase';
+import { GetLobbyMembersUseCase } from '../application/GetLobbyMembersUseCase';
+import { CreateLobbyController } from './controllers/CreateLobbyController';
+import { GetAllLobbysController } from './controllers/GetAllLobbysController';
+import { GetLobbyByIdController } from './controllers/GetLobbyByIdController';
+import { GetLobbysByOwnerController } from './controllers/GetLobbysByOwnerController';
+import { UpdateLobbyController } from './controllers/UpdateLobbyController';
+import { DeleteLobbyController } from './controllers/DeleteLobbyController';
+import { JoinLobbyController } from './controllers/JoinLobbyController';
+import { LeaveLobbyController } from './controllers/LeaveLobbyController';
+import { GetLobbyMembersController } from './controllers/GetLobbyMembersController';
+
+const lobbyRepository = new MySQLLobbyRepository();
+
+const createLobbyUseCase       = new CreateLobbyUseCase(lobbyRepository);
+const getAllLobbysUseCase       = new GetAllLobbysUseCase(lobbyRepository);
+const getLobbyByIdUseCase      = new GetLobbyByIdUseCase(lobbyRepository);
+const getLobbysByOwnerUseCase  = new GetLobbysByOwnerUseCase(lobbyRepository);
+const updateLobbyUseCase       = new UpdateLobbyUseCase(lobbyRepository);
+const deleteLobbyUseCase       = new DeleteLobbyUseCase(lobbyRepository);
+const joinLobbyUseCase         = new JoinLobbyUseCase(lobbyRepository);
+const leaveLobbyUseCase        = new LeaveLobbyUseCase(lobbyRepository);
+const getLobbyMembersUseCase   = new GetLobbyMembersUseCase(lobbyRepository);
+
+export const createLobbyController      = new CreateLobbyController(createLobbyUseCase);
+export const getAllLobbysController     = new GetAllLobbysController(getAllLobbysUseCase);
+export const getLobbyByIdController    = new GetLobbyByIdController(getLobbyByIdUseCase);
+export const getLobbysByOwnerController = new GetLobbysByOwnerController(getLobbysByOwnerUseCase);
+export const updateLobbyController     = new UpdateLobbyController(updateLobbyUseCase);
+export const deleteLobbyController     = new DeleteLobbyController(deleteLobbyUseCase);
+export const joinLobbyController       = new JoinLobbyController(joinLobbyUseCase);
+export const leaveLobbyController      = new LeaveLobbyController(leaveLobbyUseCase);
+export const getLobbyMembersController = new GetLobbyMembersController(getLobbyMembersUseCase);

@@ -8,6 +8,12 @@ import {
   authController, createUserController, getAllUsersController,
   getUserByIdController, updateUserController, deleteUserController,
 } from './src/users/infrastructure/dependencies';
+import { configureLobbyRoutes } from './src/lobbys/infrastructure/routes/lobbyRoutes';
+import {
+  createLobbyController, getAllLobbysController, getLobbyByIdController,
+  getLobbysByOwnerController, updateLobbyController, deleteLobbyController,
+  joinLobbyController, leaveLobbyController, getLobbyMembersController,
+} from './src/lobbys/infrastructure/dependencies';
 
 dotenv.config();
 
@@ -23,6 +29,12 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 app.use('/api', configureUserRoutes(
   authController, createUserController, getAllUsersController,
   getUserByIdController, updateUserController, deleteUserController
+));
+
+app.use('/api/lobbys', configureLobbyRoutes(
+  createLobbyController, getAllLobbysController, getLobbyByIdController,
+  getLobbysByOwnerController, updateLobbyController, deleteLobbyController,
+  joinLobbyController, leaveLobbyController, getLobbyMembersController,
 ));
 
 app.get('/', (_req, res) => res.json({ message: 'SquadUp API - Running' }));
