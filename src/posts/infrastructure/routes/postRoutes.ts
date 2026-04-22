@@ -7,6 +7,9 @@ import { GetPostsByLobbyController } from '../controllers/GetPostsByLobbyControl
 import { UpdatePostController } from '../controllers/UpdatePostController';
 import { DeletePostController } from '../controllers/DeletePostController';
 import { jwtMiddleware } from '../../../core/security/jwt_middleware';
+import { AddPostImagesController } from '../controllers/AddPostImagesController';
+import { GetPostImagesController } from '../controllers/GetPostImagesController';
+import { DeletePostImageController } from '../controllers/DeletePostImageController';
 
 export function configurePostRoutes(
   createCtrl: CreatePostController,
@@ -16,16 +19,22 @@ export function configurePostRoutes(
   getByLobbyCtrl: GetPostsByLobbyController,
   updateCtrl: UpdatePostController,
   deleteCtrl: DeletePostController,
+  addImagesCtrl: AddPostImagesController,
+  getImagesCtrl: GetPostImagesController,
+  deleteImageCtrl: DeletePostImageController,
 ): Router {
   const router = Router();
 
-  router.post('/',                  jwtMiddleware, (req, res) => createCtrl.execute(req, res));
-  router.get('/',                   jwtMiddleware, (req, res) => getAllCtrl.execute(req, res));
-  router.get('/:id',                jwtMiddleware, (req, res) => getByIdCtrl.execute(req, res));
-  router.get('/user/:id',           jwtMiddleware, (req, res) => getByUserCtrl.execute(req, res));
-  router.get('/lobby/:id',          jwtMiddleware, (req, res) => getByLobbyCtrl.execute(req, res));
-  router.put('/:id',                jwtMiddleware, (req, res) => updateCtrl.execute(req, res));
-  router.delete('/:id',             jwtMiddleware, (req, res) => deleteCtrl.execute(req, res));
+  router.post('/',                          jwtMiddleware, (req, res) => createCtrl.execute(req, res));
+  router.get('/',                           jwtMiddleware, (req, res) => getAllCtrl.execute(req, res));
+  router.get('/:id',                        jwtMiddleware, (req, res) => getByIdCtrl.execute(req, res));
+  router.get('/user/:id',                   jwtMiddleware, (req, res) => getByUserCtrl.execute(req, res));
+  router.get('/lobby/:id',                  jwtMiddleware, (req, res) => getByLobbyCtrl.execute(req, res));
+  router.put('/:id',                        jwtMiddleware, (req, res) => updateCtrl.execute(req, res));
+  router.delete('/:id',                     jwtMiddleware, (req, res) => deleteCtrl.execute(req, res));
+  router.post('/:id/images',                jwtMiddleware, (req, res) => addImagesCtrl.execute(req, res));
+  router.get('/:id/images',                 jwtMiddleware, (req, res) => getImagesCtrl.execute(req, res));
+  router.delete('/:id/images/:imageId',     jwtMiddleware, (req, res) => deleteImageCtrl.execute(req, res));
 
   return router;
 }
