@@ -44,14 +44,21 @@ const app = express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
-  cors: { origin: process.env.FRONTEND_URL || '*', credentials: true },
+  cors: {
+    origin: "http://localhost:4200",
+    methods: ["GET", "POST"],
+    credentials: true
+  },
 });
 
 export { io };
 
 const PORT = process.env.PORT || 3000;
 
-app.use(cors({ origin: process.env.FRONTEND_URL || '*', credentials: true }));
+app.use(cors({ 
+  origin: "http://localhost:4200", 
+  credentials: true 
+}));
 app.use(express.json());
 app.use(cookieParser());
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
@@ -87,6 +94,9 @@ setupNotificationSocket(io);
 app.get('/', (_req, res) => res.json({ message: 'SquadUp API - Running' }));
 
 server.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://localhost:${PORT}`);
-  console.log(`WebSocket disponible en ws://localhost:${PORT}`);
+  console.log(`---------------------------------------------------`);
+  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`🔌 WebSocket listo en ws://localhost:${PORT}`);
+  console.log(`🛡️  CORS habilitado para: http://localhost:4200`);
+  console.log(`---------------------------------------------------`);
 });
