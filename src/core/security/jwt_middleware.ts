@@ -12,7 +12,8 @@ declare global {
 }
 
 export function jwtMiddleware(req: Request, res: Response, next: NextFunction): void {
-  const token = req.cookies?.access_token;
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : authHeader || req.cookies?.access_token;
 
   if (!token) {
     res.status(401).json({ error: 'No autenticado - token no encontrado' });
@@ -66,7 +67,8 @@ export function requireAnyRole(...allowedRoleIds: number[]) {
 }
 
 export function optionalJWT(req: Request, res: Response, next: NextFunction): void {
-  const token = req.cookies?.access_token;
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : authHeader || req.cookies?.access_token;
 
   if (!token) {
     next();
