@@ -20,6 +20,8 @@ export class AuthController {
       const response: LoginResponse = {
         message: 'Login exitoso',
         user: this.toResponse(user),
+        accessToken,
+        refreshToken,
       };
       res.status(200).json(response);
     } catch (error) {
@@ -34,15 +36,16 @@ export class AuthController {
 
   async refreshToken(req: Request, res: Response): Promise<void> {
     try {
-      const refreshToken = req.cookies?.refresh_token;
+      const refreshToken = req.body.refreshToken || req.cookies?.refresh_token;
       if (!refreshToken) { res.status(401).json({ error: 'Refresh token no encontrado' }); return; }
 
       const claims = validateRefreshToken(refreshToken);
       if (!claims) { res.status(401).json({ error: 'Refresh token invalido' }); return; }
 
       const user = await this.authService.getUserByID(claims.userId);
-      setAuthCookie(res, generateJWT(user.id, user.email, 1));
-      res.status(200).json({ message: 'Token renovado' });
+      const newAccessToken = generateJWT(user.id, user.email, 1);
+      setAuthCookie(res, newAccessToken);
+      res.status(200).json({ message: 'Token renovada', accessToken: newAccessToken });
     } catch {
       res.status(401).json({ error: 'Error al renovar token' });
     }
