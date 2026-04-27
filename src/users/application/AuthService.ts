@@ -36,7 +36,7 @@ export class AuthService {
     const newUser: Omit<User, 'id' | 'createdAt'> = {
       name: userRequest.name,
       secondname: userRequest.secondname || null,
-      lastname: userRequest.lastname,
+      lastname: userRequest.lastname ?? null,
       secondlastname: userRequest.secondlastname || null,
       email,
       password: hashedPassword,

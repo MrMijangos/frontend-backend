@@ -1,0 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getLobbyMessagesController = exports.getLobbyMessagesUseCase = exports.sendMessageUseCase = void 0;
+const MySQLMessageAdapter_1 = require("./adapters/MySQLMessageAdapter");
+const SendMessageUseCase_1 = require("../application/SendMessageUseCase");
+const GetLobbyMessagesUseCase_1 = require("../application/GetLobbyMessagesUseCase");
+const GetLobbyMessagesController_1 = require("./controllers/GetLobbyMessagesController");
+const messageRepository = new MySQLMessageAdapter_1.MySQLMessageRepository();
+exports.sendMessageUseCase = new SendMessageUseCase_1.SendMessageUseCase(messageRepository);
+exports.getLobbyMessagesUseCase = new GetLobbyMessagesUseCase_1.GetLobbyMessagesUseCase(messageRepository);
+exports.getLobbyMessagesController = new GetLobbyMessagesController_1.GetLobbyMessagesController(exports.getLobbyMessagesUseCase);
