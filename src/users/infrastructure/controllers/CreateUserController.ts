@@ -13,8 +13,8 @@ export class CreateUserController {
       try {
         const userRequest: UserRequest = req.body;
 
-        if (!userRequest.name || !userRequest.lastname || !userRequest.email || !userRequest.password) {
-          res.status(400).json({ error: 'Campos obligatorios: name, lastname, email, password' });
+        if (!userRequest.name || !userRequest.email || !userRequest.password) {
+          res.status(400).json({ error: 'Campos obligatorios: name, email, password' });
           return;
         }
 

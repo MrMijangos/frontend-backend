@@ -4,36 +4,47 @@ import pool from '../../../core/config/conn';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 
 export class MySQLPostRepository implements IPostRepository {
+  private readonly SELECT_WITH_USER = `
+    SELECT p.*, u.name as user_name, u.profile_picture as user_avatar,
+      (SELECT image_url FROM post_images WHERE post_id = p.id LIMIT 1) as image_url
+    FROM posts p JOIN users u ON p.user_id = u.id`;
+
   async save(post: Omit<Post, 'id' | 'createdAt'>): Promise<Post> {
     const [result] = await pool.execute<ResultSetHeader>(
       `INSERT INTO posts (user_id, lobby_id, description, created_at) VALUES (?, ?, ?, NOW())`,
       [post.user_id, post.lobby_id ?? null, post.description ?? null]
     );
-    const [rows] = await pool.execute<RowDataPacket[]>('SELECT * FROM posts WHERE id = ?', [result.insertId]);
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      `${this.SELECT_WITH_USER} WHERE p.id = ?`, [result.insertId]
+    );
     return this.mapRow(rows[0]);
   }
 
   async getByID(id: number): Promise<Post | null> {
-    const [rows] = await pool.execute<RowDataPacket[]>('SELECT * FROM posts WHERE id = ?', [id]);
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      `${this.SELECT_WITH_USER} WHERE p.id = ?`, [id]
+    );
     if (rows.length === 0) return null;
     return this.mapRow(rows[0]);
   }
 
   async getAll(): Promise<Post[]> {
-    const [rows] = await pool.execute<RowDataPacket[]>('SELECT * FROM posts ORDER BY created_at DESC');
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      `${this.SELECT_WITH_USER} ORDER BY p.created_at DESC`
+    );
     return rows.map(row => this.mapRow(row));
   }
 
   async getByUser(user_id: number): Promise<Post[]> {
     const [rows] = await pool.execute<RowDataPacket[]>(
-      'SELECT * FROM posts WHERE user_id = ? ORDER BY created_at DESC', [user_id]
+      `${this.SELECT_WITH_USER} WHERE p.user_id = ? ORDER BY p.created_at DESC`, [user_id]
     );
     return rows.map(row => this.mapRow(row));
   }
 
   async getByLobby(lobby_id: number): Promise<Post[]> {
     const [rows] = await pool.execute<RowDataPacket[]>(
-      'SELECT * FROM posts WHERE lobby_id = ? ORDER BY created_at DESC', [lobby_id]
+      `${this.SELECT_WITH_USER} WHERE p.lobby_id = ? ORDER BY p.created_at DESC`, [lobby_id]
     );
     return rows.map(row => this.mapRow(row));
   }
@@ -55,8 +66,11 @@ export class MySQLPostRepository implements IPostRepository {
     return {
       id: row.id,
       user_id: row.user_id,
+      user_name: row.user_name,
+      user_avatar: row.user_avatar ?? null,
       lobby_id: row.lobby_id ?? null,
       description: row.description ?? null,
+      image_url: row.image_url ?? null,
       createdAt: new Date(row.created_at),
     };
   }

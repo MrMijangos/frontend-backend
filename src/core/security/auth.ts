@@ -50,12 +50,14 @@ export function validateRefreshToken(token: string): RefreshPayload | null {
   }
 }
 
+const isProd = process.env.NODE_ENV === 'production';
+
 export function setAuthCookie(res: Response, token: string): void {
   res.cookie('access_token', token, {
     httpOnly: true,
-    secure: true,      
-    sameSite: 'none',  
-    maxAge: 15 * 60 * 1000, 
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
+    maxAge: 15 * 60 * 1000,
     path: '/',
   });
 }
@@ -63,18 +65,18 @@ export function setAuthCookie(res: Response, token: string): void {
 export function setRefreshCookie(res: Response, token: string): void {
   res.cookie('refresh_token', token, {
     httpOnly: true,
-    secure: true,       
-    sameSite: 'none',   
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000,
-    path: '/',          
+    path: '/',
   });
 }
 
 export function clearAuthCookies(res: Response): void {
   const cookieOptions = {
     httpOnly: true,
-    secure: true,
-    sameSite: 'none' as const,
+    secure: isProd,
+    sameSite: isProd ? ('none' as const) : ('lax' as const),
     path: '/',
   };
 
@@ -82,6 +84,3 @@ export function clearAuthCookies(res: Response): void {
   res.clearCookie('refresh_token', cookieOptions);
 }
 
-function isProduction(): boolean {
-  return process.env.NODE_ENV === 'production';
-}

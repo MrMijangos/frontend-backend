@@ -43,9 +43,11 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:4200",
+    origin: FRONTEND_URL,
     methods: ["GET", "POST"],
     credentials: true
   },
@@ -55,9 +57,9 @@ export { io };
 
 const PORT = process.env.PORT || 3000;
 
-app.use(cors({ 
-  origin: "http://localhost:4200", 
-  credentials: true 
+app.use(cors({
+  origin: FRONTEND_URL,
+  credentials: true
 }));
 app.use(express.json());
 app.use(cookieParser());
@@ -97,6 +99,6 @@ server.listen(PORT, () => {
   console.log(`---------------------------------------------------`);
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
   console.log(`🔌 WebSocket listo en ws://localhost:${PORT}`);
-  console.log(`🛡️  CORS habilitado para: http://localhost:4200`);
+  console.log(`🛡️  CORS habilitado para: ${FRONTEND_URL}`);
   console.log(`---------------------------------------------------`);
 });

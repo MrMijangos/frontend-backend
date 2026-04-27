@@ -11,7 +11,6 @@ export class UpdateUserUseCase {
     if (!existingUser) throw new Error('Usuario no encontrado');
 
     if (!updateRequest.name?.trim()) throw new Error('El nombre es obligatorio');
-    if (!updateRequest.lastname?.trim()) throw new Error('El apellido es obligatorio');
     if (!updateRequest.email?.trim()) throw new Error('El email es obligatorio');
     if (!isValidEmail(updateRequest.email)) throw new Error('El email no es valido');
 
@@ -19,7 +18,7 @@ export class UpdateUserUseCase {
       ...existingUser,
       name: updateRequest.name.trim(),
       secondname: updateRequest.secondname?.trim() || null,
-      lastname: updateRequest.lastname.trim(),
+      lastname: updateRequest.lastname?.trim() || null,
       secondlastname: updateRequest.secondlastname?.trim() || null,
       email: updateRequest.email.trim().toLowerCase(),
       profile_picture: updateRequest.profile_picture !== undefined

@@ -27,9 +27,9 @@ export function configurePostRoutes(
 
   router.post('/',                          jwtMiddleware, (req, res) => createCtrl.execute(req, res));
   router.get('/',                           jwtMiddleware, (req, res) => getAllCtrl.execute(req, res));
-  router.get('/:id',                        jwtMiddleware, (req, res) => getByIdCtrl.execute(req, res));
   router.get('/user/:id',                   jwtMiddleware, (req, res) => getByUserCtrl.execute(req, res));
   router.get('/lobby/:id',                  jwtMiddleware, (req, res) => getByLobbyCtrl.execute(req, res));
+  router.get('/:id',                        jwtMiddleware, (req, res) => getByIdCtrl.execute(req, res));
   router.put('/:id',                        jwtMiddleware, (req, res) => updateCtrl.execute(req, res));
   router.delete('/:id',                     jwtMiddleware, (req, res) => deleteCtrl.execute(req, res));
   router.post('/:id/images',                jwtMiddleware, (req, res) => addImagesCtrl.execute(req, res));

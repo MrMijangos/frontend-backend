@@ -39,6 +39,7 @@ export function setupChatSocket(
           ...m, sentAt: m.sentAt.toISOString(),
         })));
       } catch (error) {
+        console.error('Error al cargar historial de mensajes:', error);
         socket.emit('error', { message: 'Error al cargar mensajes' });
       }
 

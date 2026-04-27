@@ -2,7 +2,7 @@ export interface User {
   id: number;
   name: string;
   secondname: string | null;
-  lastname: string;
+  lastname: string | null;
   secondlastname: string | null;
   email: string;
   password: string;

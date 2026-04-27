@@ -4,21 +4,26 @@ import pool from '../../../core/config/conn';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 
 export class MySQLMessageRepository implements IMessageRepository {
-  async save(message: Omit<Message, 'id' | 'sentAt'>): Promise<Message> {
+  async save(message: Omit<Message, 'id' | 'sentAt' | 'user_name'>): Promise<Message> {
     const [result] = await pool.execute<ResultSetHeader>(
       `INSERT INTO messages (lobby_id, user_id, content, sent_at) VALUES (?, ?, ?, NOW())`,
       [message.lobby_id, message.user_id, message.content]
     );
     const [rows] = await pool.execute<RowDataPacket[]>(
-      'SELECT * FROM messages WHERE id = ?', [result.insertId]
+      `SELECT m.*, u.name as user_name FROM messages m
+       JOIN users u ON m.user_id = u.id
+       WHERE m.id = ?`,
+      [result.insertId]
     );
     return this.mapRow(rows[0]);
   }
 
   async getByLobby(lobby_id: number, limit = 50): Promise<Message[]> {
     const [rows] = await pool.execute<RowDataPacket[]>(
-      `SELECT * FROM messages WHERE lobby_id = ? ORDER BY sent_at ASC LIMIT ?`,
-      [lobby_id, limit]
+      `SELECT m.*, u.name as user_name FROM messages m
+       JOIN users u ON m.user_id = u.id
+       WHERE m.lobby_id = ? ORDER BY m.sent_at ASC LIMIT ${limit}`,
+      [lobby_id]
     );
     return rows.map(row => this.mapRow(row));
   }
@@ -35,6 +40,7 @@ export class MySQLMessageRepository implements IMessageRepository {
       id: row.id,
       lobby_id: row.lobby_id,
       user_id: row.user_id,
+      user_name: row.user_name,
       content: row.content,
       sentAt: new Date(row.sent_at),
     };

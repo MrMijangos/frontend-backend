@@ -9,7 +9,6 @@ export class CreateUserUseCase {
 
   async execute(userRequest: UserRequest): Promise<User> {
     if (!userRequest.name?.trim()) throw new Error('El nombre es obligatorio');
-    if (!userRequest.lastname?.trim()) throw new Error('El apellido es obligatorio');
     if (!userRequest.email?.trim()) throw new Error('El email es obligatorio');
     if (!isValidEmail(userRequest.email)) throw new Error('El email no es valido');
     if (!userRequest.password || userRequest.password.length < 6)
@@ -23,7 +22,7 @@ export class CreateUserUseCase {
     const newUser: Omit<User, 'id' | 'createdAt'> = {
       name: userRequest.name.trim(),
       secondname: userRequest.secondname?.trim() || null,
-      lastname: userRequest.lastname.trim(),
+      lastname: userRequest.lastname?.trim() || null,
       secondlastname: userRequest.secondlastname?.trim() || null,
       email: userRequest.email.trim().toLowerCase(),
       password: hashedPassword,

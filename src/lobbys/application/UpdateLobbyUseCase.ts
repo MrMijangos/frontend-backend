@@ -15,6 +15,8 @@ export class UpdateLobbyUseCase {
       ...existing,
       name: request.name.trim(),
       description: request.description?.trim() || null,
+      game: request.game?.trim() || existing.game,
+      max_members: request.max_members ?? existing.max_members,
       image: request.image !== undefined ? request.image : existing.image,
     };
 

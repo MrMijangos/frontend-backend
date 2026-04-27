@@ -15,8 +15,8 @@ export class UpdateUserController {
         if (isNaN(id)) { res.status(400).json({ error: 'ID invalido' }); return; }
 
         const updateRequest: UpdateUserRequest = req.body;
-        if (!updateRequest.name || !updateRequest.lastname || !updateRequest.email) {
-          res.status(400).json({ error: 'Campos obligatorios: name, lastname, email' });
+        if (!updateRequest.name || !updateRequest.email) {
+          res.status(400).json({ error: 'Campos obligatorios: name, email' });
           return;
         }
 

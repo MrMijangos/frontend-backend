@@ -5,32 +5,61 @@ import pool from '../../../core/config/conn';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 
 export class MySQLLobbyRepository implements ILobbyRepository {
-  async save(lobby: Omit<Lobby, 'id' | 'createdAt'>): Promise<Lobby> {
+  async save(lobby: Omit<Lobby, 'id' | 'createdAt' | 'owner_name' | 'members_count'>): Promise<Lobby> {
     const query = `
-      INSERT INTO lobbys (name, description, image, owner_id, created_at)
-      VALUES (?, ?, ?, ?, NOW())
+      INSERT INTO lobbys (name, description, game, max_members, image, owner_id, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, NOW())
     `;
     const [result] = await pool.execute<ResultSetHeader>(query, [
-      lobby.name, lobby.description, lobby.image, lobby.owner_id,
+      lobby.name, lobby.description, lobby.game, lobby.max_members, lobby.image, lobby.owner_id,
     ]);
-    const [rows] = await pool.execute<RowDataPacket[]>('SELECT * FROM lobbys WHERE id = ?', [result.insertId]);
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      `SELECT l.*, u.name as owner_name, COUNT(lm.id) as members_count
+       FROM lobbys l
+       LEFT JOIN users u ON l.owner_id = u.id
+       LEFT JOIN lobby_members lm ON l.id = lm.lobby_id
+       WHERE l.id = ?
+       GROUP BY l.id`,
+      [result.insertId]
+    );
     return this.mapLobby(rows[0]);
   }
 
   async getByID(id: number): Promise<Lobby | null> {
-    const [rows] = await pool.execute<RowDataPacket[]>('SELECT * FROM lobbys WHERE id = ?', [id]);
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      `SELECT l.*, u.name as owner_name, COUNT(lm.id) as members_count
+       FROM lobbys l
+       LEFT JOIN users u ON l.owner_id = u.id
+       LEFT JOIN lobby_members lm ON l.id = lm.lobby_id
+       WHERE l.id = ?
+       GROUP BY l.id`,
+      [id]
+    );
     if (rows.length === 0) return null;
     return this.mapLobby(rows[0]);
   }
 
   async getAll(): Promise<Lobby[]> {
-    const [rows] = await pool.execute<RowDataPacket[]>('SELECT * FROM lobbys ORDER BY created_at DESC');
+    const [rows] = await pool.execute<RowDataPacket[]>(
+      `SELECT l.*, u.name as owner_name, COUNT(lm.id) as members_count
+       FROM lobbys l
+       LEFT JOIN users u ON l.owner_id = u.id
+       LEFT JOIN lobby_members lm ON l.id = lm.lobby_id
+       GROUP BY l.id
+       ORDER BY l.created_at DESC`
+    );
     return rows.map(row => this.mapLobby(row));
   }
 
   async getByOwner(owner_id: number): Promise<Lobby[]> {
     const [rows] = await pool.execute<RowDataPacket[]>(
-      'SELECT * FROM lobbys WHERE owner_id = ? ORDER BY created_at DESC',
+      `SELECT l.*, u.name as owner_name, COUNT(lm.id) as members_count
+       FROM lobbys l
+       LEFT JOIN users u ON l.owner_id = u.id
+       LEFT JOIN lobby_members lm ON l.id = lm.lobby_id
+       WHERE l.owner_id = ?
+       GROUP BY l.id
+       ORDER BY l.created_at DESC`,
       [owner_id]
     );
     return rows.map(row => this.mapLobby(row));
@@ -38,10 +67,10 @@ export class MySQLLobbyRepository implements ILobbyRepository {
 
   async update(lobby: Lobby): Promise<void> {
     const query = `
-      UPDATE lobbys SET name = ?, description = ?, image = ? WHERE id = ?
+      UPDATE lobbys SET name = ?, description = ?, game = ?, max_members = ?, image = ? WHERE id = ?
     `;
     const [result] = await pool.execute<ResultSetHeader>(query, [
-      lobby.name, lobby.description, lobby.image, lobby.id,
+      lobby.name, lobby.description, lobby.game, lobby.max_members, lobby.image, lobby.id,
     ]);
     if (result.affectedRows === 0) throw new Error('Lobby no encontrado');
   }
@@ -55,7 +84,11 @@ export class MySQLLobbyRepository implements ILobbyRepository {
     const query = `INSERT INTO lobby_members (lobby_id, user_id, joined_at) VALUES (?, ?, NOW())`;
     const [result] = await pool.execute<ResultSetHeader>(query, [lobby_id, user_id]);
     const [rows] = await pool.execute<RowDataPacket[]>(
-      'SELECT * FROM lobby_members WHERE id = ?', [result.insertId]
+      `SELECT lm.*, u.name as user_name
+       FROM lobby_members lm
+       JOIN users u ON lm.user_id = u.id
+       WHERE lm.id = ?`,
+      [result.insertId]
     );
     return this.mapMember(rows[0]);
   }
@@ -70,7 +103,11 @@ export class MySQLLobbyRepository implements ILobbyRepository {
 
   async getMembers(lobby_id: number): Promise<LobbyMember[]> {
     const [rows] = await pool.execute<RowDataPacket[]>(
-      'SELECT * FROM lobby_members WHERE lobby_id = ? ORDER BY joined_at ASC',
+      `SELECT lm.*, u.name as user_name
+       FROM lobby_members lm
+       JOIN users u ON lm.user_id = u.id
+       WHERE lm.lobby_id = ?
+       ORDER BY lm.joined_at ASC`,
       [lobby_id]
     );
     return rows.map(row => this.mapMember(row));
@@ -89,8 +126,12 @@ export class MySQLLobbyRepository implements ILobbyRepository {
       id: row.id,
       name: row.name,
       description: row.description ?? null,
+      game: row.game ?? 'General',
+      max_members: row.max_members ?? 10,
       image: row.image ?? null,
       owner_id: row.owner_id,
+      owner_name: row.owner_name ?? undefined,
+      members_count: Number(row.members_count ?? 0),
       createdAt: new Date(row.created_at),
     };
   }
@@ -100,6 +141,7 @@ export class MySQLLobbyRepository implements ILobbyRepository {
       id: row.id,
       lobby_id: row.lobby_id,
       user_id: row.user_id,
+      user_name: row.user_name ?? undefined,
       joinedAt: new Date(row.joined_at),
     };
   }

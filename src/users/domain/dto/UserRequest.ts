@@ -1,7 +1,7 @@
 export interface UserRequest {
   name: string;
   secondname?: string;
-  lastname: string;
+  lastname?: string;
   secondlastname?: string;
   email: string;
   password: string;
